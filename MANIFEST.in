@@ -1,0 +1,22 @@
+include AUTHORS
+include INSTALL
+include LICENSE
+include LICENSE.python
+include MANIFEST.in
+include package.json
+include *.rst
+include prepare.sh
+include prepare.py
+recursive-include third_party/openssl *
+recursive-include bbc1/common/libbbcsig *
+recursive-include bbc1/common *
+recursive-include bbc1/core/ethereum *
+graft django
+prune django/contrib/admin/bin
+graft docs
+graft extras
+graft js_tests
+graft scripts
+graft tests
+global-exclude __pycache__
+global-exclude *.py[co]
