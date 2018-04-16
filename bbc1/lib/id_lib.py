@@ -20,7 +20,7 @@ import time
 
 sys.path.append("../../")
 
-from bbc1.app import app_support_lib
+from bbc1.lib import app_support_lib
 from bbc1.core import bbclib
 from bbc1.core import logger, bbc_app
 from bbc1.core.bbc_error import *
