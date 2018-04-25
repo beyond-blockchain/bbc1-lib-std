@@ -16,7 +16,7 @@ class MyInstall(install):
             pass
         except Exception as e:
             print(e)
-            print("Error compiling openssl.")
+            print("-- Error message--")
             exit(1)
         else:
             install.run(self)
