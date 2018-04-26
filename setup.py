@@ -13,37 +13,23 @@ with open('README.rst') as f:
 class MyInstall(install):
     def run(self):
         try:
-            subprocess.call(['/bin/sh', 'prepare.sh'], cwd=here)
-            subprocess.call(['python', 'prepare.py'], cwd=here)
+            pass
         except Exception as e:
             print(e)
-            print("Error compiling openssl.")
+            print("-- Error message--")
             exit(1)
         else:
             install.run(self)
 
 
-bbc1_requires = [
-                 'pyOpenSSL>=16.2.0',
-                 'jinja2==2.8.1',
-                 'Flask>=0.10.1',
-                 'requests>=2.12.4',
-                 'pytest>=3.0.5',
-                 'gevent>=1.2.1',
-                 'populus',
-                 'msgpack-python>=0.4.8',
-                 'populus==2.1.0',
-                 'eth-utils==0.7.4',
-                ]
+bbc1_requires = []
 
-bbc1_packages = ['bbc1', 'bbc1.core', 'bbc1.core.ethereum', 'bbc1.core.libbbcsig']
+bbc1_packages = [
+                 'bbc1',
+                 'bbc1.lib'
+                 ]
 
-bbc1_commands = [
-                 'bbc1/core/bbc_core.py',
-                 'utils/bbc_ping.py',
-                 'utils/bbc_system_conf.py',
-                 'utils/subsystem_tool.py',
-                 'examples/file_proof/file_proof.py']
+bbc1_commands = []
 
 bbc1_classifiers = [
                     'Development Status :: 4 - Beta',
@@ -52,9 +38,9 @@ bbc1_classifiers = [
                     'Topic :: Software Development']
 
 setup(
-    name='bbc1',
-    version='0.10.0',
-    description='A core system of Beyond Blockchain One',
+    name='bbc1-lib-std',
+    version='0.0.1',
+    description='Standard library of Beyond Blockchain One',
     long_description=readme,
     url='https://github.com/beyond-blockchain/bbc1',
     author='beyond-blockchain.org',
