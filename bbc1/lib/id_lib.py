@@ -132,13 +132,11 @@ class BBcIdPublickeyMap:
 
         directive = Directive(Directive.CMD_REPLACE, public_keys)
 
-        tx = bbclib.make_transaction_for_base_asset(
-                asset_group_id=self.namespace_id, event_num=1)
-
+        tx = bbclib.make_transaction(event_num=1, witness=True)
+        tx.events[0].asset_group_id = self.namespace_id
         tx.events[0].asset.add(user_id=user_id,
                 asset_body=directive.serialize())
         tx.events[0].add(mandatory_approver=user_id)
-        tx.add(witness=bbclib.BBcWitness())
         tx.witness.add_witness(user_id)
         self.sign_and_insert(tx, user_id, keypair)
         return (user_id, initial_keypairs)
@@ -230,11 +228,11 @@ class BBcIdPublickeyMap:
             dat.extend(Directive(Directive.CMD_REPLACE,
                     public_keys_to_replace).serialize())
 
-        tx = bbclib.make_transaction_for_base_asset(
-                asset_group_id=self.namespace_id, event_num=1)
+        tx = bbclib.make_transaction(event_num=1)
+        tx.events[0].asset_group_id = self.namespace_id
         tx.events[0].asset.add(user_id=user_id, asset_body=dat)
         tx.events[0].add(mandatory_approver=user_id)
-        bbclib.add_reference_to_transaction(self.namespace_id, tx, reftx, 0)
+        bbclib.add_reference_to_transaction(tx, self.namespace_id, reftx, 0)
 
         if keypair is None:
             return tx
@@ -355,8 +353,7 @@ class BBcIdPublickeyMap:
         res = self.__app.callback.sync_by_queryid(ret)
         if res[KeyType.status] < ESUCCESS:
             raise RuntimeError(res[KeyType.reason].decode())
-        return bbclib.recover_transaction_object_from_rawdata(
-                res[KeyType.transaction_data])
+        return bbclib.BBcTransaction(deserialize=res[KeyType.transaction_data])
 
 
     def __read_maps_by_public_key(self, public_key):
