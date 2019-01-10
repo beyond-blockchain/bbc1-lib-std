@@ -22,6 +22,7 @@ sys.path.append("../../")
 
 from bbc1.lib import app_support_lib
 from bbc1.core import bbclib
+from bbc1.core.libs import bbclib_utils
 from bbc1.core import logger, bbc_app
 from bbc1.core.bbc_error import *
 from bbc1.core.message_key_types import KeyType
@@ -66,27 +67,31 @@ class Directive:
 
     @staticmethod
     def from_serialized_data(ptr, data):
+
         if ptr >= len(data):
             return ptr, None
         try:
-            ptr, command = bbclib.get_n_byte_int(ptr, 1, data)
-            ptr, num_pubkeys = bbclib.get_n_byte_int(ptr, 2, data)
+            ptr, command = bbclib_utils.get_n_byte_int(ptr, 1, data)
+            ptr, num_pubkeys = bbclib_utils.get_n_byte_int(ptr, 2, data)
             public_keys = []
             for i in range(num_pubkeys):
-                ptr, size = bbclib.get_n_byte_int(ptr, 2, data)
-                ptr, pubkey = bbclib.get_n_bytes(ptr, size, data)
+                ptr, size = bbclib_utils.get_n_byte_int(ptr, 2, data)
+                ptr, pubkey = bbclib_utils.get_n_bytes(ptr, size, data)
                 public_keys.append(bytes(pubkey))
         except:
             raise
+
         return ptr, Directive(command, public_keys)
 
 
     def serialize(self):
-        dat = bytearray(bbclib.to_1byte(self.command))
-        dat.extend(bbclib.to_2byte(len(self.public_keys)))
+
+        dat = bytearray(bbclib_utils.to_1byte(self.command))
+        dat.extend(bbclib_utils.to_2byte(len(self.public_keys)))
         for i in range(len(self.public_keys)):
-            dat.extend(bbclib.to_2byte(len(self.public_keys[i])))
+            dat.extend(bbclib_utils.to_2byte(len(self.public_keys[i])))
             dat.extend(self.public_keys[i])
+
         return bytes(dat)
 
 
@@ -119,6 +124,7 @@ class BBcIdPublickeyMap:
     def create_user_id(self, num_pubkeys=1, public_keys=None):
 
         keypair = bbclib.KeyPair()
+        keypair.generate()
         user_id = hashlib.sha256(bytes(keypair.public_key)).digest()
         # FIXME: detect collision
 
@@ -127,6 +133,7 @@ class BBcIdPublickeyMap:
             public_keys = []
             for i in range(num_pubkeys):
                 new_keypair = bbclib.KeyPair()
+                new_keypair.generate()
                 initial_keypairs.append(new_keypair)
                 public_keys.append(new_keypair.public_key)
 
@@ -182,7 +189,7 @@ class BBcIdPublickeyMap:
 
 
     def sign(self, transaction, user_id, keypair):
-        sig = transaction.sign(key_type=bbclib.KeyType.ECDSA_SECP256k1,
+        sig = transaction.sign(
                 private_key=keypair.private_key,
                 public_key=keypair.public_key)
         transaction.add_signature(user_id=user_id, signature=sig)
@@ -353,7 +360,8 @@ class BBcIdPublickeyMap:
         res = self.__app.callback.sync_by_queryid(ret)
         if res[KeyType.status] < ESUCCESS:
             raise RuntimeError(res[KeyType.reason].decode())
-        return bbclib.BBcTransaction(deserialize=res[KeyType.transaction_data])
+        tx, fmt = bbclib.deserialize(res[KeyType.transaction_data])
+        return tx
 
 
     def __read_maps_by_public_key(self, public_key):
@@ -428,7 +436,7 @@ class BBcIdPublickeyMap:
         res = self.__app.callback.sync_by_queryid(ret, 2) # FIXME: slow when not found
         if res is None or res[KeyType.status] < ESUCCESS:
             raise ValueError('not found')
-        tx = bbclib.BBcTransaction(deserialize=res[KeyType.transactions][0])
+        tx, fmt = bbclib.deserialize(res[KeyType.transactions][0])
         tx_last = tx
         tx_directives = []
         while True:

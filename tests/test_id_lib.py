@@ -46,6 +46,7 @@ def test_map_update(default_domain_id):
     public_keys = []
     for i in range(3):
         keypair = bbclib.KeyPair()
+        keypair.generate()
         public_keys.append(keypair.public_key)
 
     tx = idPubkeyMap.update(user_id, public_keys_to_replace=public_keys,
@@ -80,6 +81,7 @@ def test_map_creation_with_pubkeys(default_domain_id):
     public_keys = []
     for i in range(NUM_KEYPAIRS):
         keypair = bbclib.KeyPair()
+        keypair.generate()
         public_keys.append(keypair.public_key)
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
@@ -103,7 +105,9 @@ def test_map_eval(default_domain_id):
     keypairs1 = []
     public_keys = []
     for i in range(3):
-        keypairs1.append(bbclib.KeyPair())
+        kp = bbclib.KeyPair()
+        kp.generate()
+        keypairs1.append(kp)
         public_keys.append(keypairs1[i].public_key)
 
     tx = idPubkeyMap.update(user_id, public_keys_to_add=public_keys,
