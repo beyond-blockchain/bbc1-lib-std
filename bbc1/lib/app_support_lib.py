@@ -33,6 +33,16 @@ def get_support_dir(domain_id):
     return s_dir
 
 
+class Constants:
+
+    MAX_INT8  = 0x7f
+    MAX_INT16 = 0x7fff
+    MAX_INT32 = 0x7fffffff
+    MAX_INT64 = 0x7fffffffffffffff
+
+    O_BIT_NONE = 0
+
+
 class Database:
 
     def __init__(self, dbtype="sqlite", loglevel="all", logname=None):
