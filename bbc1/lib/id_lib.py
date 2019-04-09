@@ -146,7 +146,7 @@ class BBcIdPublickeyMap:
         tx.events[0].add(mandatory_approver=user_id)
         tx.witness.add_witness(user_id)
         self.sign_and_insert(tx, user_id, keypair)
-        return (user_id, initial_keypairs)
+        return user_id, initial_keypairs
 
 
     def get_mapped_public_keys(self, user_id, eval_time=None):

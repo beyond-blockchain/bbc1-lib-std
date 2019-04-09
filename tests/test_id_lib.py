@@ -26,7 +26,7 @@ def test_default_map_creation(default_domain_id):
     NUM_KEYPAIRS = 5
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
-    (user_id, keypairs) = idPubkeyMap.create_user_id(num_pubkeys=NUM_KEYPAIRS)
+    user_id, keypairs = idPubkeyMap.create_user_id(num_pubkeys=NUM_KEYPAIRS)
 
     assert len(keypairs) == NUM_KEYPAIRS
 
@@ -37,7 +37,7 @@ def test_default_map_creation(default_domain_id):
 def test_map_update(default_domain_id):
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
-    (user_id, keypairs) = idPubkeyMap.create_user_id(num_pubkeys=1)
+    user_id, keypairs = idPubkeyMap.create_user_id(num_pubkeys=1)
 
     assert len(keypairs) == 1
 
@@ -62,7 +62,7 @@ def test_get_map(default_domain_id):
     NUM_KEYPAIRS = 3
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
-    (user_id, keypairs) = idPubkeyMap.create_user_id(num_pubkeys=NUM_KEYPAIRS)
+    user_id, keypairs = idPubkeyMap.create_user_id(num_pubkeys=NUM_KEYPAIRS)
 
     assert len(keypairs) == NUM_KEYPAIRS
 
@@ -85,7 +85,7 @@ def test_map_creation_with_pubkeys(default_domain_id):
         public_keys.append(keypair.public_key)
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
-    (user_id, keypairs) = idPubkeyMap.create_user_id(public_keys=public_keys)
+    user_id, keypairs = idPubkeyMap.create_user_id(public_keys=public_keys)
 
     assert len(keypairs) == 0
 
@@ -96,7 +96,7 @@ def test_map_creation_with_pubkeys(default_domain_id):
 def test_map_eval(default_domain_id):
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
-    (user_id, keypairs0) = idPubkeyMap.create_user_id()
+    user_id, keypairs0 = idPubkeyMap.create_user_id()
 
     time0 = int(time.time())
     print("\n2-second interval.")
