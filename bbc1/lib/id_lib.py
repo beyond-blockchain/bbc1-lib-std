@@ -122,6 +122,15 @@ class BBcIdPublickeyMap:
 
 
     def create_user_id(self, num_pubkeys=1, public_keys=None):
+        """Create user id and keypairs
+
+        Args: 
+            num_pubkeys (int): number of public keys
+            public_keys (list): list of public key
+        
+        Return:
+            user_id (bytes): user id
+        """
 
         keypair = bbclib.KeyPair()
         keypair.generate()
@@ -150,6 +159,16 @@ class BBcIdPublickeyMap:
 
 
     def get_mapped_public_keys(self, user_id, eval_time=None):
+        """get mapped public keys
+
+        Args:
+            user_id (bytes): user id
+            eval_time (float): evaluation time
+        
+        Return:
+            public_keys (list): list object which contains public key as a element
+
+        """
         tx = self.__update_local_database(user_id)
         ret = self.__read_maps_by_user_id(user_id)
         public_keys = []
@@ -158,7 +177,6 @@ class BBcIdPublickeyMap:
 
         if eval_time is None:
             eval_time = int(time.time())
-
         while tx.timestamp > eval_time:
             self.__undo_public_keys(public_keys, tx.transaction_id, user_id)
             tx = self.__get_referred_transaction(tx)
@@ -169,6 +187,17 @@ class BBcIdPublickeyMap:
 
 
     def is_mapped(self, user_id, public_key, eval_time=None):
+        """judge whether the user id is mapped
+
+        Args:
+            user_id (bytes): user id
+            public_key (bytes): public key
+            eval_time (float): evaluation time
+        
+        Return:
+            user_id in user_ids (bool): result of judgement
+
+        """
         tx = self.__update_local_database(user_id)
         ret = self.__read_maps_by_public_key(public_key)
         user_ids = []
@@ -189,6 +218,14 @@ class BBcIdPublickeyMap:
 
 
     def sign(self, transaction, user_id, keypair):
+        """Sign the transaction
+        
+        Args:
+            transaction (BBcTransaction): transaction
+            user_id (bytes): user id
+            keypair (BBcKeypair): keypair
+
+        """
         sig = transaction.sign(
                 private_key=keypair.private_key,
                 public_key=keypair.public_key)
@@ -196,6 +233,14 @@ class BBcIdPublickeyMap:
 
 
     def sign_and_insert(self, transaction, user_id, keypair):
+        """Sign transaction and insert it to core
+
+        Args:
+            transanction (BBcTransaction): transaction
+            user_id (bytes): user id
+            keypair (BBcKeypair): keypair
+        
+        """
         self.sign(transaction, user_id, keypair)
         transaction.digest()
 
@@ -222,6 +267,15 @@ class BBcIdPublickeyMap:
     def update(self, user_id, public_keys_to_add=None,
             public_keys_to_remove=None, public_keys_to_replace=None,
             keypair=None):
+        """update map
+
+        Args:
+            user_id (bytes): user id
+            public_keys_to_add (list): list object which contains public keys to be added
+            public_keys_to_removed (list): list object which contains public keys to be removed
+            public_keys_to_replaced (list): list object which contains public keys to be replaced
+            keypair (BBcKeypair): keypair
+        """
         reftx = self.__update_local_database(user_id)
 
         dat = bytearray(b'')
@@ -249,6 +303,15 @@ class BBcIdPublickeyMap:
 
     def verify_signers(self, transaction, asset_group_id, user_id=None,
             id_mapping=False):
+        """verify signer's user id
+
+        Args:
+            transaction (BBcTransaction): transaction
+            asset_group_id (bytes): asset group id as namespace id
+            user_id (bytes): user_id
+            id_mapping (bool):
+        
+        """
         if len(transaction.references) <= 0:
             try:
                 idx = transaction.witness.user_ids.index(user_id)
@@ -319,6 +382,7 @@ class BBcIdPublickeyMap:
 
 
     def __delete_maps(self, tx_id, user_id, public_keys=None):
+        """delete maps with updating id pubkey table"""
         if public_keys is None:
             self.__db.exec_sql(
                 self.domain_id,
@@ -342,6 +406,7 @@ class BBcIdPublickeyMap:
 
 
     def __get_event(self, transaction, user_id):
+        """get BBcEvent that matches namespace id from transaction"""
         for event in transaction.events:
             if event.asset_group_id == self.namespace_id and \
                     event.asset is not None and event.asset.user_id == user_id:
@@ -350,12 +415,14 @@ class BBcIdPublickeyMap:
 
 
     def __get_referred_transaction(self, tx):
+        """get referred transaction"""
         if len(tx.references) <= 0:
             return None
         return self.__get_transaction(tx.references[0].transaction_id)
 
 
     def __get_transaction(self, tx_id):
+        """get transaction"""
         ret = self.__app.search_transaction(tx_id)
         res = self.__app.callback.sync_by_queryid(ret)
         if res[KeyType.status] < ESUCCESS:
@@ -365,6 +432,7 @@ class BBcIdPublickeyMap:
 
 
     def __read_maps_by_public_key(self, public_key):
+        """read maps by public key considering with wheter the transaction id is removed"""
         return self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -375,6 +443,7 @@ class BBcIdPublickeyMap:
 
 
     def __read_maps_by_user_id(self, user_id):
+        """read maps by user id considering with wheter the transaction id is removed"""
         return self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -431,6 +500,15 @@ class BBcIdPublickeyMap:
 
 
     def __update_local_database(self, user_id):
+        """update local database
+
+        Args:
+            user_id (bytes): user id
+        
+        Return:
+            tx_last (BBcTransaction): transaction obtained at last
+
+        """
         ret = self.__app.search_transaction_with_condition(
                 asset_group_id=self.namespace_id, user_id=user_id)
         res = self.__app.callback.sync_by_queryid(ret, 2) # FIXME: slow when not found
@@ -472,6 +550,7 @@ class BBcIdPublickeyMap:
 
 
     def __write_maps(self, tx_id, user_id, public_keys):
+        """write maps with insertion of user id, pubkey and tx id"""
         for pubkey in public_keys:
             self.__db.exec_sql(
                 self.domain_id,
