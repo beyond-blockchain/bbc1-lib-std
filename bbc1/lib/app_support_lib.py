@@ -42,6 +42,19 @@ def get_support_dir(domain_id):
     return s_dir
 
 
+def get_timestamp_in_seconds(transaction):
+    """Gets timestamp of a transaction in seconds.
+
+    Args:
+        transaction (BBcTransaction):
+
+    Return:
+        timestamp (int):
+
+    """
+    return transaction.timestamp // 1000
+
+
 class Constants:
 
     MAX_INT8  = 0x7f
