@@ -26,6 +26,15 @@ DIR_APP_SUPPORT = '.bbc1_app_support/'
 
 
 def get_support_dir(domain_id):
+    """Gets support directory path and if support directory does not exists the directory is made.
+
+    Args:
+        domain_id (str):
+
+    Return:
+        s_dir (str):
+
+    """
     s_domain_id = binascii.b2a_hex(domain_id).decode()
     s_dir = DIR_APP_SUPPORT + s_domain_id + '/'
     if not os.path.exists(s_dir):
@@ -55,12 +64,30 @@ class Database:
 
 
     def check_table_existence(self, domain_id, dbname, name):
+        """Checks the table existence and if the table name does not exists in db, nothing will returns
+
+        Args:
+            domain_id (bytes):
+            dbname (str): name of database
+            name (str): name of table
+        
+        Return:
+            ret (list):
+
+        """
         ret = self.exec_sql_fetchone(domain_id, dbname,
             "select * from sqlite_master where type='table' and name=?", name)
         return ret
 
 
     def close_db(self, domain_id, dbname):
+        """Closes the connection of database
+
+        Args:
+            domain_id (bytes):
+            dbname (str):
+
+        """
         if domain_id not in self.db or domain_id not in self.db_cur:
             return
         self.db_cur[domain_id][dbname].close()
@@ -69,6 +96,15 @@ class Database:
 
     def create_table_in_db(self, domain_id, dbname, tbl, tbl_definition,
                             primary_key=None, indices=[]):
+        """Creates a table in the database and if domain_id is not registered to db or db_cur, nothing will returns 
+
+        Args:
+            domain_id (bytes):
+            dbname (str): name of database
+            tbl (str): name of table
+            tbl_definition (list): ex) [["user_id", "BLOB"], ["public_key", "BLOB"], ["tx_id_added", "BLOB"], ["tx_id_removed", "BLOB"],]
+
+        """
         if domain_id not in self.db or domain_id not in self.db_cur or \
           domain_id not in self.db_name:
             return
@@ -88,6 +124,18 @@ class Database:
 
 
     def exec_sql(self, domain_id, dbname, sql, *dat):
+        """Excecutes sql to the database
+
+        Args:
+            domain_id (bytes):
+            dbname (str): name of database
+            sql (str): query
+            dat (str): variable for query, it could be tuple too
+        
+        Return:
+            ret (list):
+
+        """
         if domain_id not in self.db or domain_id not in self.db_cur or \
           domain_id not in self.db_name:
             return None
@@ -103,6 +151,17 @@ class Database:
 
 
     def exec_sql_fetchone(self, domain_id, dbname, sql, *dat):
+        """Excequtes sql and returns a single sequence
+
+        Args:
+            domain_id (bytes):
+            dbname (str):
+            sql (str):
+            dat (str): variable for query, it could be tuple too
+        
+        Return:
+            ret (list):
+        """
         if domain_id not in self.db or domain_id not in self.db_cur or \
           domain_id not in self.db_name:
             return None
@@ -119,6 +178,15 @@ class Database:
 
 
     def open_db(self, domain_id, dbname):
+        """Connects the database file. If the database file does not exist, it is created.
+        
+        dbname is must be set in the dbname dictionary in this class prior to calling this function.
+
+        Args:
+            domain_id (bytes):
+            dbname (str):
+
+        """
         if domain_id not in self.db or domain_id not in self.db_cur:
             return
         self.db[domain_id][dbname] = sqlite3.connect(
@@ -127,6 +195,13 @@ class Database:
 
 
     def setup_db(self, domain_id, name):
+        """Setup the database and create the directory named as domain_id under ".bbc1_app_supports/"
+
+        Args:
+            domain_id (bytes): 
+            name (str): name of database
+
+        """
         self.db_name[domain_id] = dict()
         s_dir = get_support_dir(domain_id)
         self.db_name[domain_id][name] = s_dir + name + '.sqlite3'
