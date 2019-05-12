@@ -21,6 +21,7 @@ import time
 sys.path.append("../../")
 
 from bbc1.lib import app_support_lib
+from bbc1.lib.app_support_lib import get_timestamp_in_seconds
 from bbc1.core import bbclib
 from bbc1.core.libs import bbclib_utils
 from bbc1.core import logger, bbc_app
@@ -177,7 +178,7 @@ class BBcIdPublickeyMap:
 
         if eval_time is None:
             eval_time = int(time.time())
-        while tx.timestamp > eval_time:
+        while get_timestamp_in_seconds(tx) > eval_time:
             self.__undo_public_keys(public_keys, tx.transaction_id, user_id)
             tx = self.__get_referred_transaction(tx)
             if tx is None:
@@ -207,7 +208,7 @@ class BBcIdPublickeyMap:
         if eval_time is None:
             eval_time = int(time.time())
 
-        while tx.timestamp > eval_time:
+        while get_timestamp_in_seconds(tx) > eval_time:
             self.__undo_user_ids(user_ids, tx.transaction_id, user_id,
                     public_key)
             tx = self.__get_referred_transaction(tx)
@@ -324,7 +325,7 @@ class BBcIdPublickeyMap:
                 else:
                     if self.is_mapped(user_id,
                             transaction.signatures[idx].pubkey,
-                            transaction.timestamp):
+                            get_timestamp_in_seconds(transaction)):
                         return True
             except:
                 return False
@@ -341,7 +342,7 @@ class BBcIdPublickeyMap:
                     for i in ref.sig_indices:
                         if self.is_mapped(approver,
                                 transaction.signatures[i].pubkey,
-                                transaction.timestamp):
+                                get_timestamp_in_seconds(transaction)):
                             signed = True
                             break
                     if signed == False:
@@ -351,7 +352,7 @@ class BBcIdPublickeyMap:
                     for i in ref.sig_indices:
                         if self.is_mapped(approver,
                                 transaction.signatures[i].pubkey,
-                                transaction.timestamp):
+                                get_timestamp_in_seconds(transaction)):
                             count += 1
                             break
                 if count < event.option_approver_num_numerator:
