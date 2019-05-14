@@ -26,13 +26,15 @@ DIR_APP_SUPPORT = '.bbc1_app_support/'
 
 
 def get_support_dir(domain_id):
-    """Gets support directory path and if support directory does not exists the directory is made.
+    """Gets application support directory path.
+
+    If the directory does not exist, then the directory is created.
 
     Args:
-        domain_id (str):
+        domain_id (bytes): The application domain.
 
-    Return:
-        s_dir (str):
+    Returns:
+        s_dir (str): The relative path of the application support directory.
 
     """
     s_domain_id = binascii.b2a_hex(domain_id).decode()
@@ -45,17 +47,27 @@ def get_support_dir(domain_id):
 def get_timestamp_in_seconds(transaction):
     """Gets timestamp of a transaction in seconds.
 
-    Args:
-        transaction (BBcTransaction):
+    A BBcTransaction object (since core v1.3) stores the timestamp in
+    milliseconds. This function is provided for those application who wants
+    to deal with timestamps in seconds.
 
-    Return:
-        timestamp (int):
+    Args:
+        transaction (BBcTransaction): The transaction to get the timestamp of.
+
+    Returns:
+        timestamp (int): The timestamp (UNIX time) in seconds.
 
     """
     return transaction.timestamp // 1000
 
 
 class Constants:
+
+    """Collection of constants to be used in the library or application.
+
+    Common constants are provided. Libraries or applications should derive
+    their own constant classes from this.
+    """
 
     MAX_INT8  = 0x7f
     MAX_INT16 = 0x7fff
@@ -67,7 +79,20 @@ class Constants:
 
 class Database:
 
+    """Common database object.
+
+    Currently supports SQLite only.
+    """
+
     def __init__(self, dbtype="sqlite", loglevel="all", logname=None):
+        """Initializes the object.
+
+        Args:
+            dbtype (str): The type of database. "sqlite" by default.
+            loglevel (str): The logging level. "all" by default.
+            logname (str): The logger name. None by default.
+
+        """
         self.logger = logger.get_logger(key="app_support_db", level=loglevel,
                                         logname=logname)
         self.dbtype = dbtype
@@ -77,15 +102,15 @@ class Database:
 
 
     def check_table_existence(self, domain_id, dbname, name):
-        """Checks the table existence and if the table name does not exists in db, nothing will returns
+        """Checks the existence of a table.
 
         Args:
-            domain_id (bytes):
-            dbname (str): name of database
-            name (str): name of table
+            domain_id (bytes): The application domain.
+            dbname (str): The name of the database.
+            name (str): The name of the table to check the existence.
         
-        Return:
-            ret (list):
+        Returns:
+            ret (list): The SQL result. None if the table does not exist.
 
         """
         ret = self.exec_sql_fetchone(domain_id, dbname,
@@ -94,11 +119,11 @@ class Database:
 
 
     def close_db(self, domain_id, dbname):
-        """Closes the connection of database
+        """Closes the connection to the database.
 
         Args:
-            domain_id (bytes):
-            dbname (str):
+            domain_id (bytes): The application domain.
+            dbname (str): The name of the database to close the connection to.
 
         """
         if domain_id not in self.db or domain_id not in self.db_cur:
@@ -109,13 +134,15 @@ class Database:
 
     def create_table_in_db(self, domain_id, dbname, tbl, tbl_definition,
                             primary_key=None, indices=[]):
-        """Creates a table in the database and if domain_id is not registered to db or db_cur, nothing will returns 
+        """Creates a table in the specified database.
 
         Args:
-            domain_id (bytes):
-            dbname (str): name of database
-            tbl (str): name of table
-            tbl_definition (list): ex) [["user_id", "BLOB"], ["public_key", "BLOB"], ["tx_id_added", "BLOB"], ["tx_id_removed", "BLOB"],]
+            domain_id (bytes): The application domain.
+            dbname (str): The name of the database.
+            tbl (str): The name of the table to create.
+            tbl_definition (list): The definition of the table in a list.
+            primary_key (int): The index of the primary key. None by default.
+            indices (array): The indices of the indices. [] by default.
 
         """
         if domain_id not in self.db or domain_id not in self.db_cur or \
@@ -137,16 +164,16 @@ class Database:
 
 
     def exec_sql(self, domain_id, dbname, sql, *dat):
-        """Excecutes sql to the database
+        """Excecutes an SQL statement for the specified database.
 
         Args:
-            domain_id (bytes):
-            dbname (str): name of database
-            sql (str): query
-            dat (str): variable for query, it could be tuple too
+            domain_id (bytes): The application domain.
+            dbname (str): The name of the database.
+            sql (str): The SQL statement to execute.
+            dat (tuple): The replacement values for the statement.
         
-        Return:
-            ret (list):
+        Returns:
+            ret (list): The results.
 
         """
         if domain_id not in self.db or domain_id not in self.db_cur or \
@@ -164,16 +191,17 @@ class Database:
 
 
     def exec_sql_fetchone(self, domain_id, dbname, sql, *dat):
-        """Excequtes sql and returns a single sequence
+        """Excequtes an SQL statement to receive a single result.
 
         Args:
-            domain_id (bytes):
-            dbname (str):
-            sql (str):
-            dat (str): variable for query, it could be tuple too
+            domain_id (bytes): The application domain.
+            dbname (str): The name of the database.
+            sql (str): The SQL statement to execute.
+            dat (tuple): The replacement values for the statement.
         
-        Return:
+        Returns:
             ret (list):
+
         """
         if domain_id not in self.db or domain_id not in self.db_cur or \
           domain_id not in self.db_name:
@@ -191,13 +219,13 @@ class Database:
 
 
     def open_db(self, domain_id, dbname):
-        """Connects the database file. If the database file does not exist, it is created.
-        
-        dbname is must be set in the dbname dictionary in this class prior to calling this function.
+        """Connects to the specified database.
+
+        If the database file does not exist, it is created.
 
         Args:
-            domain_id (bytes):
-            dbname (str):
+            domain_id (bytes): The application domain.
+            dbname (str): The name of the database.
 
         """
         if domain_id not in self.db or domain_id not in self.db_cur:
@@ -208,11 +236,11 @@ class Database:
 
 
     def setup_db(self, domain_id, name):
-        """Setup the database and create the directory named as domain_id under ".bbc1_app_supports/"
+        """Sets up the database to reside in the application support directory.
 
         Args:
-            domain_id (bytes): 
-            name (str): name of database
+            domain_id (bytes): The appication domain.
+            name (str): The name of database.
 
         """
         self.db_name[domain_id] = dict()
@@ -222,4 +250,4 @@ class Database:
         self.db_cur[domain_id] = dict()
 
 
-# end of app_db_lib.py
+# end of app_support_lib.py
