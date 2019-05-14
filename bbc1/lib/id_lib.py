@@ -55,6 +55,9 @@ id_publickey_map_user_id = bbclib.get_new_id(".id_publickey_map",
 
 class Directive:
 
+    """Directive to add, remove and replace public keys mapped to an ID.
+    """
+
     CMD_NONE    = 0
     CMD_ADD     = 1
     CMD_REMOVE  = 2
@@ -98,11 +101,22 @@ class Directive:
 
 class BBcIdPublickeyMap:
 
+    """Mapping between IDs and public keys in a namespace.
     """
-    Domain must have been registered to the core prior to creating this object.
-    """
+
     def __init__(self, domain_id, namespace_id=default_namespace_id,
             port=DEFAULT_CORE_PORT, logname="-", loglevel="none"):
+        """Initializes the object.
+
+        Args:
+            domain_id (bytes): The application domain.
+            namespace_id (bytes): The name space. default_namespace_id exists.
+            port (int): The port to the core. DEFAULT_CORE_PORT by default.
+            logname(str): The name of the log.
+            loglevel(str): The logging level. "none" by default.
+
+        """
+
         self.logger = logger.get_logger(key="id_lib", level=loglevel,
                                         logname=logname) # FIXME: use the logger
         self.domain_id = domain_id
@@ -123,14 +137,16 @@ class BBcIdPublickeyMap:
 
 
     def create_user_id(self, num_pubkeys=1, public_keys=None):
-        """Create user id and keypairs
+        """Creates a user ID (and key pairs) and map public keys to it.
 
         Args: 
-            num_pubkeys (int): number of public keys
-            public_keys (list): list of public key
+            num_pubkeys (int): The number of new public keys to map to the ID.
+            public_keys (list): The public keys to map. None by default.
         
-        Return:
-            user_id (bytes): user id
+        Returns:
+            user_id (bytes): The created user ID.
+            initial_keypairs (lists): The list of created key pairs.
+
         """
 
         keypair = bbclib.KeyPair()
@@ -160,14 +176,15 @@ class BBcIdPublickeyMap:
 
 
     def get_mapped_public_keys(self, user_id, eval_time=None):
-        """get mapped public keys
+        """Gets mapped public keys to a user ID at the specified time.
 
         Args:
-            user_id (bytes): user id
-            eval_time (float): evaluation time
+            user_id (bytes): The user ID.
+            eval_time (int): The time to evaluate the mapping. None by default.
+                If None, the current time is used.
         
-        Return:
-            public_keys (list): list object which contains public key as a element
+        Returns:
+            public_keys (list): The mapped public keys.
 
         """
         tx = self.__update_local_database(user_id)
@@ -188,15 +205,16 @@ class BBcIdPublickeyMap:
 
 
     def is_mapped(self, user_id, public_key, eval_time=None):
-        """judge whether the user id is mapped
+        """Checks if the specified public key is mapped to the user ID or not.
 
         Args:
-            user_id (bytes): user id
-            public_key (bytes): public key
-            eval_time (float): evaluation time
+            user_id (bytes): The user ID.
+            public_key (bytes): The public key.
+            eval_time (int): The time to evaluate the mapping. None by default.
+                If None, the current time is used.
         
-        Return:
-            user_id in user_ids (bool): result of judgement
+        Returns:
+            result (bool): True if the public key is (was) mapped.
 
         """
         tx = self.__update_local_database(user_id)
@@ -219,12 +237,12 @@ class BBcIdPublickeyMap:
 
 
     def sign(self, transaction, user_id, keypair):
-        """Sign the transaction
+        """Signs the transaction.
         
         Args:
-            transaction (BBcTransaction): transaction
-            user_id (bytes): user id
-            keypair (BBcKeypair): keypair
+            transaction (BBcTransaction): The transaction to sign.
+            user_id (bytes): The user ID of the signer.
+            keypair (BBcKeypair): The keypair to sign with.
 
         """
         sig = transaction.sign(
@@ -234,12 +252,14 @@ class BBcIdPublickeyMap:
 
 
     def sign_and_insert(self, transaction, user_id, keypair):
-        """Sign transaction and insert it to core
+        """Signs the transaction and inserts it to the core.
+
+        Updates the local database for the ID-public-key mappings.
 
         Args:
-            transanction (BBcTransaction): transaction
-            user_id (bytes): user id
-            keypair (BBcKeypair): keypair
+            transanction (BBcTransaction): The transaction to sign.
+            user_id (bytes): The user ID of the signer.
+            keypair (BBcKeypair): The keypair to sign with.
         
         """
         self.sign(transaction, user_id, keypair)
@@ -268,14 +288,15 @@ class BBcIdPublickeyMap:
     def update(self, user_id, public_keys_to_add=None,
             public_keys_to_remove=None, public_keys_to_replace=None,
             keypair=None):
-        """update map
+        """Updates the mapping between the user ID and public keys.
 
         Args:
-            user_id (bytes): user id
-            public_keys_to_add (list): list object which contains public keys to be added
-            public_keys_to_removed (list): list object which contains public keys to be removed
-            public_keys_to_replaced (list): list object which contains public keys to be replaced
-            keypair (BBcKeypair): keypair
+            user_id (bytes): The user ID.
+            public_keys_to_add (list): Adding keys. None by default.
+            public_keys_to_remove (list): Removing keys. None by default.
+            public_keys_to_replace (list): Replacing keys. None by default.
+            keypair (BBcKeypair): The keypair to sign the transaction with.
+
         """
         reftx = self.__update_local_database(user_id)
 
@@ -304,14 +325,17 @@ class BBcIdPublickeyMap:
 
     def verify_signers(self, transaction, asset_group_id, user_id=None,
             id_mapping=False):
-        """verify signer's user id
+        """Verifies that the signatures are made by appropriate signers.
 
         Args:
-            transaction (BBcTransaction): transaction
-            asset_group_id (bytes): asset group id as namespace id
-            user_id (bytes): user_id
-            id_mapping (bool):
-        
+            transaction (BBcTransaction): The transaction to verify signers.
+            asset_group_id (bytes): The asset group ID to verify signers.
+            user_id (bytes): The signing user ID. None by default.
+            id_mapping (bool): If it is ID-mapping. False by default.
+
+        Returns:
+            result (bool): True if appropriate signers sign the transaction.
+
         """
         if len(transaction.references) <= 0:
             try:
@@ -361,6 +385,7 @@ class BBcIdPublickeyMap:
 
 
     def __apply(self, tx_id, user_id, directive):
+        """Applies the directive."""
         if directive.command == Directive.CMD_ADD:
             self.__write_maps(tx_id, user_id, directive.public_keys)
         elif directive.command == Directive.CMD_REMOVE:
@@ -370,10 +395,8 @@ class BBcIdPublickeyMap:
             self.__write_maps(tx_id, user_id, directive.public_keys)
 
 
-    '''
-    This private method is for testing purposes only.
-    '''
     def __clear_local_database(self, user_id):
+        """Clears the local database. For testing purposes only."""
         return self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -383,7 +406,7 @@ class BBcIdPublickeyMap:
 
 
     def __delete_maps(self, tx_id, user_id, public_keys=None):
-        """delete maps with updating id pubkey table"""
+        """Deletes maps (records transaction IDs for removal)."""
         if public_keys is None:
             self.__db.exec_sql(
                 self.domain_id,
@@ -407,7 +430,7 @@ class BBcIdPublickeyMap:
 
 
     def __get_event(self, transaction, user_id):
-        """get BBcEvent that matches namespace id from transaction"""
+        """Gets a BBcEvent of the namespace with the specified user ID."""
         for event in transaction.events:
             if event.asset_group_id == self.namespace_id and \
                     event.asset is not None and event.asset.user_id == user_id:
@@ -416,14 +439,14 @@ class BBcIdPublickeyMap:
 
 
     def __get_referred_transaction(self, tx):
-        """get referred transaction"""
+        """Gets the referred transaction."""
         if len(tx.references) <= 0:
             return None
         return self.__get_transaction(tx.references[0].transaction_id)
 
 
     def __get_transaction(self, tx_id):
-        """get transaction"""
+        """Gets the transaction object of the specified ID."""
         ret = self.__app.search_transaction(tx_id)
         res = self.__app.callback.sync_by_queryid(ret)
         if res[KeyType.status] < ESUCCESS:
@@ -433,7 +456,7 @@ class BBcIdPublickeyMap:
 
 
     def __read_maps_by_public_key(self, public_key):
-        """read maps by public key considering with wheter the transaction id is removed"""
+        """Reads maps currently in effect with the specified public key."""
         return self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -444,7 +467,7 @@ class BBcIdPublickeyMap:
 
 
     def __read_maps_by_user_id(self, user_id):
-        """read maps by user id considering with wheter the transaction id is removed"""
+        """Reads maps currenctly in effect with the specified user ID."""
         return self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -455,6 +478,7 @@ class BBcIdPublickeyMap:
 
 
     def __undo_public_keys(self, public_keys, tx_id, user_id):
+        """Undoes directives of the transaction on the set of public keys."""
         ret = self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -478,6 +502,7 @@ class BBcIdPublickeyMap:
 
 
     def __undo_user_ids(self, user_ids, tx_id, user_id, public_key):
+        """Undoes directives of the transaction on the set of user IDs."""
         ret = self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
@@ -501,15 +526,7 @@ class BBcIdPublickeyMap:
 
 
     def __update_local_database(self, user_id):
-        """update local database
-
-        Args:
-            user_id (bytes): user id
-        
-        Return:
-            tx_last (BBcTransaction): transaction obtained at last
-
-        """
+        """Updates the local database upon synchronization with the current."""
         ret = self.__app.search_transaction_with_condition(
                 asset_group_id=self.namespace_id, user_id=user_id)
         res = self.__app.callback.sync_by_queryid(ret, 2) # FIXME: slow when not found
@@ -551,7 +568,7 @@ class BBcIdPublickeyMap:
 
 
     def __write_maps(self, tx_id, user_id, public_keys):
-        """write maps with insertion of user id, pubkey and tx id"""
+        """Writes maps."""
         for pubkey in public_keys:
             self.__db.exec_sql(
                 self.domain_id,
