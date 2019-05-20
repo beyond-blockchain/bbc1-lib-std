@@ -145,7 +145,7 @@ class BBcIdPublickeyMap:
         
         Returns:
             user_id (bytes): The created user ID.
-            initial_keypairs (lists): The list of created key pairs.
+            initial_keypairs (list): The list of created key pairs.
 
         """
 
