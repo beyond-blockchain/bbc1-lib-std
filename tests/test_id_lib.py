@@ -194,5 +194,7 @@ def test_map_eval(default_domain_id):
     assert idPubkeyMap.is_mapped(user_id, keypairs1[1].public_key) == True
     assert idPubkeyMap.is_mapped(user_id, keypairs1[2].public_key) == True
 
+    idPubkeyMap.close()
+
 
 # end of tests/test_id_lib.py

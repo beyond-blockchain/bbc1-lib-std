@@ -136,6 +136,11 @@ class BBcIdPublickeyMap:
                 indices=[0, 1])
 
 
+    def close(self):
+        self.__app.unregister_from_core()
+        self.__db.close_db(self.domain_id, NAME_OF_DB)
+
+
     def create_user_id(self, num_pubkeys=1, public_keys=None):
         """Creates a user ID (and key pairs) and map public keys to it.
 
