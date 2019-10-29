@@ -116,7 +116,6 @@ class BBcIdPublickeyMap:
             loglevel(str): The logging level. "none" by default.
 
         """
-
         self.logger = logger.get_logger(key="id_lib", level=loglevel,
                                         logname=logname) # FIXME: use the logger
         self.domain_id = domain_id
@@ -137,16 +136,19 @@ class BBcIdPublickeyMap:
 
 
     def close(self):
+        """Closes connections.
+        """
         self.__app.unregister_from_core()
         self.__db.close_db(self.domain_id, NAME_OF_DB)
 
 
-    def create_user_id(self, num_pubkeys=1, public_keys=None):
+    def create_user_id(self, num_pubkeys=1, public_keys=None, label=None):
         """Creates a user ID (and key pairs) and map public keys to it.
 
         Args: 
             num_pubkeys (int): The number of new public keys to map to the ID.
             public_keys (list): The public keys to map. None by default.
+            label (TransactionLabel): Label of transaction. None by default.
         
         Returns:
             user_id (bytes): The created user ID.
@@ -175,6 +177,10 @@ class BBcIdPublickeyMap:
         tx.events[0].asset.add(user_id=user_id,
                 asset_body=directive.serialize())
         tx.events[0].add(mandatory_approver=user_id)
+
+        if label is not None:
+            tx.add(event=label.get_event())
+
         tx.witness.add_witness(user_id)
         self.sign_and_insert(tx, user_id, keypair)
         return user_id, initial_keypairs
@@ -292,7 +298,7 @@ class BBcIdPublickeyMap:
 
     def update(self, user_id, public_keys_to_add=None,
             public_keys_to_remove=None, public_keys_to_replace=None,
-            keypair=None):
+            keypair=None, label=None):
         """Updates the mapping between the user ID and public keys.
 
         Args:
@@ -301,6 +307,7 @@ class BBcIdPublickeyMap:
             public_keys_to_remove (list): Removing keys. None by default.
             public_keys_to_replace (list): Replacing keys. None by default.
             keypair (BBcKeypair): The keypair to sign the transaction with.
+            label (TransactionLabel): Label of transaction. None by default.
 
         """
         reftx = self.__update_local_database(user_id)
@@ -320,6 +327,10 @@ class BBcIdPublickeyMap:
         tx.events[0].asset_group_id = self.namespace_id
         tx.events[0].asset.add(user_id=user_id, asset_body=dat)
         tx.events[0].add(mandatory_approver=user_id)
+
+        if label is not None:
+            tx.add(event=label.get_event())
+
         bbclib.add_reference_to_transaction(tx, self.namespace_id, reftx, 0)
 
         if keypair is None:

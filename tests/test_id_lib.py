@@ -5,6 +5,7 @@ import time
 
 sys.path.extend(["../"])
 from bbc1.lib import id_lib
+from bbc1.lib.app_support_lib import TransactionLabel
 from bbc1.core import bbc_app
 from bbc1.core import bbclib
 from bbc1.core.bbc_config import DEFAULT_CORE_PORT
@@ -96,7 +97,13 @@ def test_map_creation_with_pubkeys(default_domain_id):
 def test_map_eval(default_domain_id):
 
     idPubkeyMap = id_lib.BBcIdPublickeyMap(default_domain_id)
-    user_id, keypairs0 = idPubkeyMap.create_user_id()
+
+    label_group_id = bbclib.get_new_id('test_label_group',
+            include_timestamp=False)
+    label_id = TransactionLabel.create_label_id('test_map_eval:c', '0')
+    label = TransactionLabel(label_group_id, label_id)
+
+    user_id, keypairs0 = idPubkeyMap.create_user_id(label=label)
 
     time0 = int(time.time())
     print("\n2-second interval.")
@@ -110,8 +117,11 @@ def test_map_eval(default_domain_id):
         keypairs1.append(kp)
         public_keys.append(keypairs1[i].public_key)
 
+    label_id = TransactionLabel.create_label_id('test_map_eval:u', '0')
+    label = TransactionLabel(label_group_id, label_id)
+
     tx = idPubkeyMap.update(user_id, public_keys_to_add=public_keys,
-            keypair=keypairs0[0])
+            keypair=keypairs0[0], label=label)
 
     time1 = int(time.time())
     print("2-second interval.")

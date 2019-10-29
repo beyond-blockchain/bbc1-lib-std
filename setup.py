@@ -39,7 +39,7 @@ bbc1_classifiers = [
 
 setup(
     name='bbc1-lib-std',
-    version='0.16',
+    version='0.17',
     description='Standard library of Beyond Blockchain One',
     long_description=readme,
     url='https://github.com/beyond-blockchain/bbc1-lib-std',
