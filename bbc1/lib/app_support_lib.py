@@ -14,13 +14,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import binascii
+import hashlib
 import os
 import sqlite3
-import binascii
 
 import sys
 sys.path.extend(["../../"])
-from bbc1.core import logger
+
+from bbc1.core import bbclib, logger
+
 
 DIR_APP_SUPPORT = '.bbc1_app_support/'
 
@@ -248,6 +251,89 @@ class Database:
         self.db_name[domain_id][name] = s_dir + name + '.sqlite3'
         self.db[domain_id] = dict()
         self.db_cur[domain_id] = dict()
+
+
+class TransactionLabel:
+
+    """Label of a transaction.
+
+    Creates and interprets a BBcEvent object.
+    """
+
+    def __init__(self, label_group_id, label_id=None):
+        """Initializes the object.
+
+        Args:
+            label_group_id (bytes): The ID of labels for an application.
+            label_id (bytes): The digest of a label.
+
+        """
+        self.label_group_id = label_group_id
+        self.label_id = label_id
+
+
+    @staticmethod
+    def create_label_id(label, salt):
+        """Creates the digest of a label.
+
+        Args:
+            label (str): The label string.
+            salt (str): A salt to prevent dictionary attacks.
+
+        Returns:
+            label_id (bytes): The digest of the label.
+
+        """
+        dat = bytearray(label.encode())
+        dat.extend(salt.encode())
+        return hashlib.sha256(bytes(dat)).digest()
+
+
+    def get_event(self):
+        """Gets the BBcEvent object for a label to embed in a transaction.
+
+        Returns:
+            event (BBcEvent): The event to embed in a transaction as a lebel.
+
+        """
+        event = bbclib.BBcEvent(asset_group_id=self.label_group_id)
+        event.add(asset=bbclib.BBcAsset())
+        event.asset.add(user_id=self.label_id)
+        return event
+
+
+    def get_label_id(self, tx):
+        """Gets the label ID embedded in a transaction.
+
+        Args:
+            tx (BBcTransaction): The transaction.
+
+        Returns:
+            label_id (bytes): The label ID.
+
+        """
+        for event in tx.events:
+            if event.asset_group_id == self.label_group_id:
+                return event.asset.user_id
+
+        return None
+
+
+    def is_labeled(self, tx):
+        """Checks if the label ID is embedded in a transaction.
+
+        Args:
+            tx (BBcTransaction): The transaction.
+
+        Returns:
+            labeled (bool): True if tx has the label ID
+
+        """
+        for event in tx.events:
+            if event.asset_group_id == self.label_group_id:
+                return event.asset.user_id == self.label_id
+
+        return False
 
 
 # end of app_support_lib.py
