@@ -23,8 +23,8 @@ class MyInstall(install):
 
 
 bbc1_requires = [
-					'py-bbclib>=1.6'
-				]
+                    'py-bbclib>=1.6'
+                ]
 
 bbc1_packages = [
                  'bbc1',
