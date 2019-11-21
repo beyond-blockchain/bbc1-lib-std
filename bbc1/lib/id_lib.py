@@ -27,7 +27,7 @@ from bbc1.core import logger, bbc_app
 from bbc1.core.bbc_error import *
 from bbc1.core.message_key_types import KeyType
 from bbc1.core.bbc_config import DEFAULT_CORE_PORT
-from bbclib.libs import bbclib_utils
+from bbclib.libs import bbclib_binary
 
 
 NAME_OF_DB = 'id_db'
@@ -75,12 +75,12 @@ class Directive:
         if ptr >= len(data):
             return ptr, None
         try:
-            ptr, command = bbclib_utils.get_n_byte_int(ptr, 1, data)
-            ptr, num_pubkeys = bbclib_utils.get_n_byte_int(ptr, 2, data)
+            ptr, command = bbclib_binary.get_n_byte_int(ptr, 1, data)
+            ptr, num_pubkeys = bbclib_binary.get_n_byte_int(ptr, 2, data)
             public_keys = []
             for i in range(num_pubkeys):
-                ptr, size = bbclib_utils.get_n_byte_int(ptr, 2, data)
-                ptr, pubkey = bbclib_utils.get_n_bytes(ptr, size, data)
+                ptr, size = bbclib_binary.get_n_byte_int(ptr, 2, data)
+                ptr, pubkey = bbclib_binary.get_n_bytes(ptr, size, data)
                 public_keys.append(bytes(pubkey))
         except:
             raise
@@ -90,10 +90,10 @@ class Directive:
 
     def serialize(self):
 
-        dat = bytearray(bbclib_utils.to_1byte(self.command))
-        dat.extend(bbclib_utils.to_2byte(len(self.public_keys)))
+        dat = bytearray(bbclib_binary.to_1byte(self.command))
+        dat.extend(bbclib_binary.to_2byte(len(self.public_keys)))
         for i in range(len(self.public_keys)):
-            dat.extend(bbclib_utils.to_2byte(len(self.public_keys[i])))
+            dat.extend(bbclib_binary.to_2byte(len(self.public_keys[i])))
             dat.extend(self.public_keys[i])
 
         return bytes(dat)
@@ -259,7 +259,7 @@ class BBcIdPublickeyMap:
         sig = transaction.sign(
                 private_key=keypair.private_key,
                 public_key=keypair.public_key)
-        transaction.add_signature(user_id=user_id, signature=sig)
+        transaction.add_signature_object(user_id=user_id, signature=sig)
 
 
     def sign_and_insert(self, transaction, user_id, keypair):

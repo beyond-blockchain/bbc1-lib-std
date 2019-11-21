@@ -25,7 +25,7 @@ sys.path.extend(["../../"])
 from bbc1.core import bbclib, logger
 
 
-DIR_APP_SUPPORT = '.bbc1_app_support/'
+DIR_APP_SUPPORT = '.bbc1_app_support'
 
 
 def get_support_dir(domain_id):
@@ -41,7 +41,8 @@ def get_support_dir(domain_id):
 
     """
     s_domain_id = binascii.b2a_hex(domain_id).decode()
-    s_dir = DIR_APP_SUPPORT + s_domain_id + '/'
+    s_dir = os.environ.get('BBC1_APP_SUPPORT_DIR', DIR_APP_SUPPORT) + '/' \
+            + s_domain_id + '/'
     if not os.path.exists(s_dir):
         os.makedirs(s_dir, mode=0o777, exist_ok=True)
     return s_dir
