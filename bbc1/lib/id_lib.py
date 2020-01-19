@@ -36,6 +36,7 @@ NAME_OF_DB = 'id_db'
 id_pubkey_table_definition = [
     ["user_id", "BLOB"],
     ["public_key", "BLOB"],
+    ["key_type", "INTEGER"],
     ["tx_id_added", "BLOB"],
     ["tx_id_removed", "BLOB"],
 ]
@@ -43,14 +44,15 @@ id_pubkey_table_definition = [
 
 IDX_USER_ID       = 0
 IDX_PUBLIC_KEY    = 1
-IDX_TX_ID_ADDED   = 2
-IDX_TX_ID_REMOVED = 3
+IDX_KEY_TYPE      = 2
+IDX_TX_ID_ADDED   = 3
+IDX_TX_ID_REMOVED = 4
 
 
 default_namespace_id = bbclib.get_new_id(".default_namespace",
-                                            include_timestamp=False)
+        include_timestamp=False)
 id_publickey_map_user_id = bbclib.get_new_id(".id_publickey_map",
-                                            include_timestamp=False)
+        include_timestamp=False)
 
 
 class Directive:
@@ -64,9 +66,10 @@ class Directive:
     CMD_REPLACE = 3
 
 
-    def __init__(self, command, public_keys):
+    def __init__(self, command, public_keys, key_types=None):
         self.command = command
         self.public_keys = public_keys
+        self.key_types = key_types
 
 
     @staticmethod
@@ -78,21 +81,28 @@ class Directive:
             ptr, command = bbclib_binary.get_n_byte_int(ptr, 1, data)
             ptr, num_pubkeys = bbclib_binary.get_n_byte_int(ptr, 2, data)
             public_keys = []
+            key_types = []
             for i in range(num_pubkeys):
+                ptr, key_type = bbclib_binary.get_n_byte_int(ptr, 2, data)
+                key_types.append(int(key_type))
                 ptr, size = bbclib_binary.get_n_byte_int(ptr, 2, data)
                 ptr, pubkey = bbclib_binary.get_n_bytes(ptr, size, data)
                 public_keys.append(bytes(pubkey))
         except:
             raise
 
-        return ptr, Directive(command, public_keys)
+        return ptr, Directive(command, public_keys, key_types)
 
 
-    def serialize(self):
+    def serialize(self, default_key_type):
 
         dat = bytearray(bbclib_binary.to_1byte(self.command))
         dat.extend(bbclib_binary.to_2byte(len(self.public_keys)))
         for i in range(len(self.public_keys)):
+            if self.key_types is None:
+                dat.extend(bbclib_binary.to_2byte(default_key_type))
+            else:
+                dat.extend(bbclib_binary.to_2byte(self.key_types[i]))
             dat.extend(bbclib_binary.to_2byte(len(self.public_keys[i])))
             dat.extend(self.public_keys[i])
 
@@ -105,21 +115,24 @@ class BBcIdPublickeyMap:
     """
 
     def __init__(self, domain_id, namespace_id=default_namespace_id,
-            port=DEFAULT_CORE_PORT, logname="-", loglevel="none"):
+            port=DEFAULT_CORE_PORT, logname="-", loglevel="none",
+            default_key_type=bbclib.DEFAULT_CURVETYPE):
         """Initializes the object.
 
         Args:
             domain_id (bytes): The application domain.
             namespace_id (bytes): The name space. default_namespace_id exists.
             port (int): The port to the core. DEFAULT_CORE_PORT by default.
-            logname(str): The name of the log.
-            loglevel(str): The logging level. "none" by default.
+            logname (str): The name of the log.
+            loglevel (str): The logging level. "none" by default.
+            default_key_type (int): Default public key type.
 
         """
         self.logger = logger.get_logger(key="id_lib", level=loglevel,
                                         logname=logname) # FIXME: use the logger
         self.domain_id = domain_id
         self.namespace_id = namespace_id
+        self.default_key_type = default_key_type
         self.__app = bbc_app.BBcAppClient(port=DEFAULT_CORE_PORT,
                                           loglevel=loglevel)
         self.__app.set_user_id(id_publickey_map_user_id)
@@ -132,7 +145,7 @@ class BBcIdPublickeyMap:
         self.__db.create_table_in_db(domain_id, NAME_OF_DB,
                 'id_pubkey_table',
                 id_pubkey_table_definition,
-                indices=[0, 1])
+                indices=[IDX_USER_ID, IDX_PUBLIC_KEY])
 
 
     def close(self):
@@ -142,12 +155,14 @@ class BBcIdPublickeyMap:
         self.__db.close_db(self.domain_id, NAME_OF_DB)
 
 
-    def create_user_id(self, num_pubkeys=1, public_keys=None, label=None):
+    def create_user_id(self, num_pubkeys=1, public_keys=None, key_types=None,
+            label=None):
         """Creates a user ID (and key pairs) and map public keys to it.
 
         Args: 
             num_pubkeys (int): The number of new public keys to map to the ID.
             public_keys (list): The public keys to map. None by default.
+            key_types (list): Types of the public keys. None by default.
             label (TransactionLabel): Label of transaction. None by default.
         
         Returns:
@@ -156,7 +171,7 @@ class BBcIdPublickeyMap:
 
         """
 
-        keypair = bbclib.KeyPair()
+        keypair = bbclib.KeyPair(curvetype=self.default_key_type)
         keypair.generate()
         user_id = hashlib.sha256(bytes(keypair.public_key)).digest()
         # FIXME: detect collision
@@ -165,17 +180,17 @@ class BBcIdPublickeyMap:
         if public_keys is None:
             public_keys = []
             for i in range(num_pubkeys):
-                new_keypair = bbclib.KeyPair()
+                new_keypair = bbclib.KeyPair(curvetype=self.default_key_type)
                 new_keypair.generate()
                 initial_keypairs.append(new_keypair)
                 public_keys.append(new_keypair.public_key)
 
-        directive = Directive(Directive.CMD_REPLACE, public_keys)
+        directive = Directive(Directive.CMD_REPLACE, public_keys, key_types)
 
         tx = bbclib.make_transaction(event_num=1, witness=True)
         tx.events[0].asset_group_id = self.namespace_id
         tx.events[0].asset.add(user_id=user_id,
-                asset_body=directive.serialize())
+                asset_body=directive.serialize(self.default_key_type))
         tx.events[0].add(mandatory_approver=user_id)
 
         if label is not None:
@@ -196,26 +211,30 @@ class BBcIdPublickeyMap:
         
         Returns:
             public_keys (list): The mapped public keys.
+            key_types (list): Types of the public keys.
 
         """
         tx = self.__update_local_database(user_id)
         ret = self.__read_maps_by_user_id(user_id)
         public_keys = []
+        key_types = []
         for r in ret:
             public_keys.append(r[IDX_PUBLIC_KEY])
+            key_types.append(r[IDX_KEY_TYPE])
 
         if eval_time is None:
             eval_time = int(time.time())
         while get_timestamp_in_seconds(tx) > eval_time:
-            self.__undo_public_keys(public_keys, tx.transaction_id, user_id)
+            self.__undo_public_keys(public_keys, key_types, tx.transaction_id,
+                    user_id)
             tx = self.__get_referred_transaction(tx)
             if tx is None:
                 break
 
-        return public_keys
+        return public_keys, key_types
 
 
-    def is_mapped(self, user_id, public_key, eval_time=None):
+    def is_mapped(self, user_id, public_key, eval_time=None, key_type=None):
         """Checks if the specified public key is mapped to the user ID or not.
 
         Args:
@@ -223,13 +242,14 @@ class BBcIdPublickeyMap:
             public_key (bytes): The public key.
             eval_time (int): The time to evaluate the mapping. None by default.
                 If None, the current time is used.
-        
+            key_type (int): Type of the public key. None by default.
+
         Returns:
             result (bool): True if the public key is (was) mapped.
 
         """
         tx = self.__update_local_database(user_id)
-        ret = self.__read_maps_by_public_key(public_key)
+        ret = self.__read_maps_by_public_key(public_key, key_type)
         user_ids = []
         for r in ret:
             user_ids.append(r[IDX_USER_ID])
@@ -239,7 +259,7 @@ class BBcIdPublickeyMap:
 
         while get_timestamp_in_seconds(tx) > eval_time:
             self.__undo_user_ids(user_ids, tx.transaction_id, user_id,
-                    public_key)
+                    public_key, key_type)
             tx = self.__get_referred_transaction(tx)
             if tx is None:
                 break
@@ -256,9 +276,7 @@ class BBcIdPublickeyMap:
             keypair (BBcKeypair): The keypair to sign with.
 
         """
-        sig = transaction.sign(
-                private_key=keypair.private_key,
-                public_key=keypair.public_key)
+        sig = transaction.sign(keypair=keypair)
         transaction.add_signature_object(user_id=user_id, signature=sig)
 
 
@@ -298,7 +316,8 @@ class BBcIdPublickeyMap:
 
     def update(self, user_id, public_keys_to_add=None,
             public_keys_to_remove=None, public_keys_to_replace=None,
-            keypair=None, label=None):
+            key_types_to_add=None, key_types_to_remove=None,
+            key_types_to_replace=None, keypair=None, label=None):
         """Updates the mapping between the user ID and public keys.
 
         Args:
@@ -306,6 +325,9 @@ class BBcIdPublickeyMap:
             public_keys_to_add (list): Adding keys. None by default.
             public_keys_to_remove (list): Removing keys. None by default.
             public_keys_to_replace (list): Replacing keys. None by default.
+            key_types_to_add (list): Adding key types. None by default.
+            key_types_to_remove (list): Removing key types. None by default.
+            key_types_to_replace (list): Replacing key types. None by default.
             keypair (BBcKeypair): The keypair to sign the transaction with.
             label (TransactionLabel): Label of transaction. None by default.
 
@@ -315,13 +337,16 @@ class BBcIdPublickeyMap:
         dat = bytearray(b'')
         if public_keys_to_add is not None:
             dat.extend(Directive(Directive.CMD_ADD,
-                    public_keys_to_add).serialize())
+                    public_keys_to_add,
+                    key_types_to_add).serialize(self.default_key_type))
         if public_keys_to_remove is not None:
             dat.extend(Directive(Directive.CMD_REMOVE,
-                    public_keys_to_remove).serialize())
+                    public_keys_to_remove,
+                    key_types_to_remove).serialize(self.default_key_type))
         if public_keys_to_replace is not None:
             dat.extend(Directive(Directive.CMD_REPLACE,
-                    public_keys_to_replace).serialize())
+                    public_keys_to_replace,
+                    key_types_to_replace).serialize(self.default_key_type))
 
         tx = bbclib.make_transaction(event_num=1)
         tx.events[0].asset_group_id = self.namespace_id
@@ -403,12 +428,15 @@ class BBcIdPublickeyMap:
     def __apply(self, tx_id, user_id, directive):
         """Applies the directive."""
         if directive.command == Directive.CMD_ADD:
-            self.__write_maps(tx_id, user_id, directive.public_keys)
+            self.__write_maps(tx_id, user_id, directive.public_keys,
+                    directive.key_types)
         elif directive.command == Directive.CMD_REMOVE:
-            self.__delete_maps(tx_id, user_id, directive.public_keys)
+            self.__delete_maps(tx_id, user_id, directive.public_keys,
+                    directive.key_types)
         elif directive.command == Directive.CMD_REPLACE:
             self.__delete_maps(tx_id, user_id)
-            self.__write_maps(tx_id, user_id, directive.public_keys)
+            self.__write_maps(tx_id, user_id, directive.public_keys,
+                    directive.key_types)
 
 
     def __clear_local_database(self, user_id):
@@ -421,7 +449,7 @@ class BBcIdPublickeyMap:
         )
 
 
-    def __delete_maps(self, tx_id, user_id, public_keys=None):
+    def __delete_maps(self, tx_id, user_id, public_keys=None, key_types=None):
         """Deletes maps (records transaction IDs for removal)."""
         if public_keys is None:
             self.__db.exec_sql(
@@ -471,7 +499,7 @@ class BBcIdPublickeyMap:
         return tx
 
 
-    def __read_maps_by_public_key(self, public_key):
+    def __read_maps_by_public_key(self, public_key, key_type):
         """Reads maps currently in effect with the specified public key."""
         return self.__db.exec_sql(
             self.domain_id,
@@ -493,7 +521,7 @@ class BBcIdPublickeyMap:
         )
 
 
-    def __undo_public_keys(self, public_keys, tx_id, user_id):
+    def __undo_public_keys(self, public_keys, key_types, tx_id, user_id):
         """Undoes directives of the transaction on the set of public keys."""
         ret = self.__db.exec_sql(
             self.domain_id,
@@ -504,20 +532,23 @@ class BBcIdPublickeyMap:
             tx_id
         )
         for r in ret:
-            public_keys.remove(r[0])
+            idx = public_keys.index(r[0])
+            public_keys.pop(idx)
+            key_types.pop(idx)
         ret = self.__db.exec_sql(
             self.domain_id,
             NAME_OF_DB,
-            ('select public_key from id_pubkey_table where '
+            ('select public_key, key_type from id_pubkey_table where '
              'user_id=? and tx_id_removed=?'),
             user_id,
             tx_id
         )
         for r in ret:
             public_keys.append(r[0])
+            key_types.append(r[1])
 
 
-    def __undo_user_ids(self, user_ids, tx_id, user_id, public_key):
+    def __undo_user_ids(self, user_ids, tx_id, user_id, public_key, key_type):
         """Undoes directives of the transaction on the set of user IDs."""
         ret = self.__db.exec_sql(
             self.domain_id,
@@ -583,15 +614,16 @@ class BBcIdPublickeyMap:
         return tx_last
 
 
-    def __write_maps(self, tx_id, user_id, public_keys):
+    def __write_maps(self, tx_id, user_id, public_keys, key_types):
         """Writes maps."""
-        for pubkey in public_keys:
+        for pubkey, key_type in zip(public_keys, key_types):
             self.__db.exec_sql(
                 self.domain_id,
                 NAME_OF_DB,
-                'insert into id_pubkey_table values (?, ?, ?, ?)',
+                'insert into id_pubkey_table values (?, ?, ?, ?, ?)',
                 user_id,
                 pubkey,
+                key_type,
                 tx_id,
                 None
             )
